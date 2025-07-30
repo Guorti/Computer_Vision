@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-FILENAME = "5.JPG"
+FILENAME = "7.JPG"
 
 # Load image in grayscale
 img_original = cv2.imread(f"piano_images/{FILENAME}")
