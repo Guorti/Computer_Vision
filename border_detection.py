@@ -2,13 +2,19 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-FILENAME = "9.jpg"
+FILENAME = "11.jpg"
 
-# Load image in grayscale
-img_original = cv2.imread(f"piano_images/{FILENAME}")
-img_original2 = img_original.copy()
-img = cv2.imread(f"piano_images/{FILENAME}", cv2.IMREAD_GRAYSCALE)
- 
+# Resize the image
+
+image_raw = cv2.imread(f"piano_images/{FILENAME}", cv2.IMREAD_GRAYSCALE)
+
+original_height, original_width = image_raw.shape[:2]
+new_width = 450
+aspect_ratio = new_width / original_width
+new_height = int(original_height * aspect_ratio) 
+
+img = cv2.resize(image_raw, (new_width, new_height))
+
 # Apply Gaussian Blur to reduce noise
 #1.4
 #blur = cv2.GaussianBlur(img, (5, 5), 2)
@@ -57,7 +63,11 @@ color_hull = (255, 255, 255) # white
 
 # Draw convex hull (must be in a list)
 cv2.drawContours(drawing, [hull], -1, color_hull, 1, 8)
-#drawing = cv2.dilate(drawing, kernel, iterations=1)
+
+convex_copy = drawing.copy()
+convex_copy_cd = drawing.copy()
+
+#drawing = cv2.dilate(drawing, kernel, iterations=1)     .02
 epsilon = 0.02 * cv2.arcLength(hull, True)
 approx = cv2.approxPolyDP(hull, epsilon, True)
 # Check if it forms a quadrilateral
@@ -71,13 +81,29 @@ if len(approx) == 4:
         cv2.circle(drawing, (x, y), radius=6, color=(0, 0, 255), thickness=-1)  # Red dots
         print(f"x: {x} | y: {y}")
 
+#convex_copy = cv2.dilate(convex_copy, kernel, iterations=1)
 
+# INTENTO SUBPIX
+# Prepare corner coordinates as float32 (required)
+corners_float = np.float32(corners).reshape(-1, 1, 2)
+# Define criteria for the refinement (stop after 30 iterations or epsilon < 0.01)
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01)
+# Refine corner positions
+cv2.cornerSubPix(convex_copy, corners_float, winSize=(5, 5), zeroZone=(-1, -1), criteria=criteria)
+# Draw refined corners
+for point in corners_float:
+    x, y = point[0]
+    cv2.circle(convex_copy, (int(x), int(y)), 6, (255, 0, 0), -1)  # Blue = refined
+    print(f"Refined x: {x:.2f} | y: {y:.2f}")
 
 # Display result
-cv2.imshow("Threshold", thresh)
+#cv2.imshow("Threshold", thresh)
+
+cv2.imshow("CORN", convex_copy)
+
+#cv2.imshow("Edges COrners", convex_copy_cd)
 
 cv2.imshow("Hull", drawing)
-
 # BLUR
 #cv2.imshow("BLUR", blur)
 
