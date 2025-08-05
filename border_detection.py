@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 
-FILENAME = "7.JPG"
+FILENAME = "9.jpg"
 
 # Load image in grayscale
 img_original = cv2.imread(f"piano_images/{FILENAME}")
@@ -18,13 +19,9 @@ alpha = 1.3  # Increase contrast (make whites whiter, blacks blacker)
 beta = 1.2    # Increase brightness (shift all pixels up)
 bright_contrast_image = cv2.convertScaleAbs(blur, alpha=alpha, beta=beta)
 
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-clahe_image = clahe.apply(bright_contrast_image)
-
 # Define mejor el contraste, permite identificar mejor los bordes
 equalized = cv2.equalizeHist(bright_contrast_image)
 #equalized = cv2.equalizeHist(equalized)
-
 
 """
 Thresholding:
@@ -43,55 +40,43 @@ edges6 = cv2.Canny(thresh, threshold1=140, threshold2=350)
 kernel = np.ones((3,3), np.uint8)
 dilated_edges = cv2.dilate(edges6, kernel, iterations=1)
 
-# Posterior a la dilatacion se puede aplicar erosion, sin embargo no parece necesario
-closed_edges = cv2.erode(dilated_edges, kernel)
-
 # Contorno
 contours, hierarchy = cv2.findContours(dilated_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 cnt = contours[0]
 c = max(contours, key=cv2.contourArea)
 
-epsilon = 0.99*cv2.arcLength(c,True)
-approx = cv2.approxPolyDP(c,epsilon,True)
+# Intento de obtener el rectangulo irregular del piano
+# Compute the convex hull
+hull = cv2.convexHull(c)
 
-# Contornos SIN aproximacion
-cv2.drawContours(img_original, [c], -1, (0,255,0), 3)
+# Create an empty black image
+drawing = np.zeros((thresh.shape[0], thresh.shape[1]), np.uint8)
 
-# Contornos CON aproximacion
-cv2.drawContours(img_original2, [approx], -1, (0,255,0), 3)
+# Define colors
+color_hull = (255, 255, 255) # white
 
-# Rectangulo
-x,y,w,h = cv2.boundingRect(cnt)
-cv2.rectangle(img_original,(x,y),(x+w,y+h),(0,255,0),2)
-
-rect = cv2.minAreaRect(c)
-box = cv2.boxPoints(rect)
-box = np.int32(box)
-cv2.drawContours(img_original,[box],0,(0,0,255),2)
-
-
+# Draw convex hull (must be in a list)
+cv2.drawContours(drawing, [hull], -1, color_hull, 1, 8)
+#drawing = cv2.dilate(drawing, kernel, iterations=1)
+epsilon = 0.02 * cv2.arcLength(hull, True)
+approx = cv2.approxPolyDP(hull, epsilon, True)
+# Check if it forms a quadrilateral
+if len(approx) == 4:
+    corners = approx.reshape(-1, 2)  # shape: (4, 2)
+    # Convert to color image if needed
+    if len(drawing.shape) == 2 or drawing.shape[2] == 1:
+        drawing = cv2.cvtColor(drawing, cv2.COLOR_GRAY2BGR)
+    # Draw corners
+    for (x, y) in corners:
+        cv2.circle(drawing, (x, y), radius=6, color=(0, 0, 255), thickness=-1)  # Red dots
+        print(f"x: {x} | y: {y}")
 
 
 
 # Display result
-# Canny engrosado
-cv2.imshow("Canny Dilated", dilated_edges)
-
-# Canny erosion
-#cv2.imshow("Canny Dilated", closed_edges)
-
-cv2.imshow("Canny Edge Detection", edges6)
-
-cv2.imshow("Closed", closed_edges)
-
-cv2.imshow("Contour", img_original)
-
-cv2.imshow("Approx Contour", img_original2)
-
-
-cv2.imshow("WHITER", bright_contrast_image)
-cv2.imshow("Equalized", equalized)
 cv2.imshow("Threshold", thresh)
+
+cv2.imshow("Hull", drawing)
 
 # BLUR
 #cv2.imshow("BLUR", blur)
