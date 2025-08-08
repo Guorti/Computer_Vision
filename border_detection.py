@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-FILENAME = "11.jpg"
+FILENAME = "9.jpg"
 
 # Resize the image
 
@@ -32,11 +32,10 @@ equalized = cv2.equalizeHist(bright_contrast_image)
 """
 Thresholding:
 “Any pixel brighter than 185, make it completely white (255)
-Any pixel 200 or darker, make it completely black (0).”
 
 _, thresh = cv2.threshold(equalized, 185, 200, cv2.THRESH_TOZERO)
 """
-_, thresh = cv2.threshold(equalized, 175, 255, cv2.THRESH_TOZERO)
+_, thresh = cv2.threshold(equalized, 176, 255, cv2.THRESH_TOZERO)
 #thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,2)
 
 # Apply Canny Edge Detector
@@ -67,43 +66,32 @@ cv2.drawContours(drawing, [hull], -1, color_hull, 1, 8)
 convex_copy = drawing.copy()
 convex_copy_cd = drawing.copy()
 
-#drawing = cv2.dilate(drawing, kernel, iterations=1)     .02
-epsilon = 0.02 * cv2.arcLength(hull, True)
-approx = cv2.approxPolyDP(hull, epsilon, True)
-# Check if it forms a quadrilateral
-if len(approx) == 4:
-    corners = approx.reshape(-1, 2)  # shape: (4, 2)
-    # Convert to color image if needed
-    if len(drawing.shape) == 2 or drawing.shape[2] == 1:
-        drawing = cv2.cvtColor(drawing, cv2.COLOR_GRAY2BGR)
-    # Draw corners
-    for (x, y) in corners:
-        cv2.circle(drawing, (x, y), radius=6, color=(0, 0, 255), thickness=-1)  # Red dots
-        print(f"x: {x} | y: {y}")
 
-#convex_copy = cv2.dilate(convex_copy, kernel, iterations=1)
 
-# INTENTO SUBPIX
-# Prepare corner coordinates as float32 (required)
-corners_float = np.float32(corners).reshape(-1, 1, 2)
-# Define criteria for the refinement (stop after 30 iterations or epsilon < 0.01)
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01)
-# Refine corner positions
-cv2.cornerSubPix(convex_copy, corners_float, winSize=(5, 5), zeroZone=(-1, -1), criteria=criteria)
-# Draw refined corners
-for point in corners_float:
-    x, y = point[0]
-    cv2.circle(convex_copy, (int(x), int(y)), 6, (255, 0, 0), -1)  # Blue = refined
-    print(f"Refined x: {x:.2f} | y: {y:.2f}")
+# Shi-Tomasi corner detection
+corners_st = cv2.goodFeaturesToTrack(
+    drawing,
+    maxCorners=4,
+    qualityLevel=0.01,
+    minDistance=30,
+    useHarrisDetector=False
+)
+
+if corners_st is not None:
+    corners_st = np.int32(corners_st)
+    for corner in corners_st:
+        x, y = corner.ravel()
+        cv2.circle(drawing, (x, y), 3, (255, 0, 0), -1)  # Green circles
 
 # Display result
-#cv2.imshow("Threshold", thresh)
+cv2.imshow("Original", img)
 
-cv2.imshow("CORN", convex_copy)
+cv2.imshow("BRIGHTER", bright_contrast_image)
 
-#cv2.imshow("Edges COrners", convex_copy_cd)
+cv2.imshow("Threshold", thresh)
 
-cv2.imshow("Hull", drawing)
+cv2.imshow("GoodFeatures", drawing)
+
 # BLUR
 #cv2.imshow("BLUR", blur)
 
