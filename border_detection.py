@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-FILENAME = "29.png"
+FILENAME = "33.png"
 RESIZE_WIDTH = 450
 PIANO_AREA_XSECTION_OFFSET = 10
 PIANO_AREA_YSECTION_PERCENTAGE = 0.4
@@ -16,6 +16,41 @@ def is_piano_inside_area(corners, img_height):
             and (0 <= y <= piano_area_ysection)):
             return False
     return True
+
+def is_piano_straight(corners):
+    corner_xy_tuples = []
+    for corner in corners:
+        x, y = corner.ravel()
+        corner_xy_tuples.append((x,y))
+    
+    corner_xy_tuples.sort(key = lambda point: point[0])
+    
+    L_third_point = (corner_xy_tuples[1][0], corner_xy_tuples[0][1])
+    R_third_point = (corner_xy_tuples[-1][0], corner_xy_tuples[-2][1])
+    corner_xy_tuples.insert(2, L_third_point)
+    corner_xy_tuples.append(R_third_point)
+
+    for corner_xy in corner_xy_tuples:
+        print(corner_xy)
+
+    BA = np.array(corner_xy_tuples[1]) - np.array(corner_xy_tuples[0])
+    BC = np.array(corner_xy_tuples[2]) - np.array(corner_xy_tuples[0])
+    
+    cos_theta = np.dot(BA, BC) / (np.linalg.norm(BA) * np.linalg.norm(BC))
+    cos_theta = np.clip(cos_theta, -1, 1)  # avoid floating-point errors
+    
+    print (f"L ANGLE: {np.degrees(np.arccos(cos_theta))}")
+
+    BA = np.array(corner_xy_tuples[4]) - np.array(corner_xy_tuples[3])
+    BC = np.array(corner_xy_tuples[5]) - np.array(corner_xy_tuples[3])
+    
+    cos_theta = np.dot(BA, BC) / (np.linalg.norm(BA) * np.linalg.norm(BC))
+    cos_theta = np.clip(cos_theta, -1, 1)  # avoid floating-point errors
+    
+    print (f"R ANGLE: {np.degrees(np.arccos(cos_theta))}")
+
+
+
         
 
 
@@ -102,7 +137,7 @@ if corners_st is not None:
         print("OUTSIDE")
     
 
-
+is_piano_straight(corners_st)
 
 
 
