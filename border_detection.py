@@ -2,18 +2,32 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-FILENAME = "9.jpg"
+FILENAME = "29.png"
+RESIZE_WIDTH = 450
+PIANO_AREA_XSECTION_OFFSET = 10
+PIANO_AREA_YSECTION_PERCENTAGE = 0.4
+
+
+def is_piano_inside_area(corners, img_height):
+    piano_area_ysection = img_height * PIANO_AREA_YSECTION_PERCENTAGE
+    for corner in corners:
+        x, y = corner.ravel()
+        if not ((PIANO_AREA_XSECTION_OFFSET <= x <= (RESIZE_WIDTH - PIANO_AREA_XSECTION_OFFSET))
+            and (0 <= y <= piano_area_ysection)):
+            return False
+    return True
+        
+
 
 # Resize the image
 
 image_raw = cv2.imread(f"piano_images/{FILENAME}", cv2.IMREAD_GRAYSCALE)
 
 original_height, original_width = image_raw.shape[:2]
-new_width = 450
-aspect_ratio = new_width / original_width
+aspect_ratio = RESIZE_WIDTH / original_width
 new_height = int(original_height * aspect_ratio) 
 
-img = cv2.resize(image_raw, (new_width, new_height))
+img = cv2.resize(image_raw, (RESIZE_WIDTH, new_height))
 
 # Apply Gaussian Blur to reduce noise
 #1.4
@@ -81,7 +95,36 @@ if corners_st is not None:
     corners_st = np.int32(corners_st)
     for corner in corners_st:
         x, y = corner.ravel()
-        cv2.circle(drawing, (x, y), 3, (255, 0, 0), -1)  # Green circles
+        cv2.circle(drawing, (x, y), 3, (255, 0, 0), -1)
+    if is_piano_inside_area(corners_st, new_height):
+        print("INSIDE")
+    else:
+        print("OUTSIDE")
+    
+
+
+
+
+
+# Recordar que new height no es el verdadero tamanho de la imagen
+# Sin embargo es mejor reducir el tamanho de la imagen asi que no importa
+piano_delimiter_section_height = new_height * PIANO_AREA_YSECTION_PERCENTAGE
+drawing = cv2.line(drawing, (0, int(piano_delimiter_section_height)), (RESIZE_WIDTH, int(piano_delimiter_section_height)), (255, 255, 255), 1)
+
+drawing = cv2.line(drawing,
+                   (PIANO_AREA_XSECTION_OFFSET, 0),
+                   (PIANO_AREA_XSECTION_OFFSET, int(piano_delimiter_section_height)),
+                   (255, 255, 255), 1)
+drawing = cv2.line(drawing,
+                   (RESIZE_WIDTH - PIANO_AREA_XSECTION_OFFSET, 0),
+                   (RESIZE_WIDTH - PIANO_AREA_XSECTION_OFFSET, int(piano_delimiter_section_height)),
+                   (255, 255, 255), 1)
+
+
+
+
+
+
 
 # Display result
 cv2.imshow("Original", img)
